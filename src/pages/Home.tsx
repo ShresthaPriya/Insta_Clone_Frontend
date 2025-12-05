@@ -1,10 +1,17 @@
+import Sidebar from "../components/Sidebar"
 
 const Home = () => {
+
+  const handleSidebarClick = (page: string) => {
+    console.log("Sidebar clicked →", page);
+  };
+
   return (
-    <div>
+    <>
       <h1>Home page</h1>
-    </div>
-  )
+      <Sidebar onClick={handleSidebarClick} />
+    </>
+  );
 }
 
-export default Home
+export default Home;
