@@ -1,61 +1,39 @@
-import React from 'react'
-import { FiHome, FiPlusSquare, FiHeart, FiSearch, FiUser } from "react-icons/fi";
-import insta_logo from "../assets/Vector.png"
+import React from "react";
+import { FiHome, FiPlusSquare, FiHeart, FiSearch, FiUser, FiMenu } from "react-icons/fi";
+import insta_logo from "../assets/Vector.png";
+import SidebarItem from "./SidebarItems";
 
 interface SidebarProps {
-    onClick: (page: string) => void;
+  onClick: (page: string) => void;
 }
 
-const Sidebar : React.FC<SidebarProps> = ({ onClick }) =>{
+const Sidebar: React.FC<SidebarProps> = ({ onClick }) => {
   return (
-    <header className='flex '>
-        <nav className="flex flex-col gap-8 border-r-6">
-            <div className="w-32 px-4 py-2">
-                <img src={insta_logo} alt='Instagram Logo'/>
-            </div>
-           
-<div 
-    onClick={() => onClick('home')}
-    className="flex items-center gap-2 cursor-pointer rounded-xl px-4 py-2 hover:bg-gray-200/40"
-  >
-    <FiHome size={24} />
-    <span>Home</span>
-  </div>
-<div 
-    onClick={() => onClick('home')}
-    className="flex items-center gap-2 cursor-pointer rounded-xl px-4 py-2 hover:bg-gray-200/40"
-  >
-    <FiHeart size={24} />
-    <span>Notification</span>
-  </div>
-<div 
-    onClick={() => onClick('home')}
-    className="flex items-center gap-2 cursor-pointer rounded-xl px-4 py-2 hover:bg-gray-200/40"
-  >
-    <FiPlusSquare size={24} />
-    <span>Create</span>
-  </div>
-<div 
-    onClick={() => onClick('home')}
-    className="flex items-center gap-2 cursor-pointer rounded-xl px-4 py-2 hover:bg-gray-200/40"
-  >
-    <FiSearch size={24} />
-    <span>Search</span>
-  </div>
- <div 
-    onClick={() => onClick('home')}
-    className="flex items-center gap-2 cursor-pointer rounded-xl px-4 py-2 hover:bg-gray-200/40"
-  >
-    <FiUser size={24} />
-    <span>Profile</span>
-  </div>
-                
-            
-            
-        </nav>
-      
-    </header>
-  )
-}
+<aside className="fixed left-0 top-0 w-64 h-screen border-r bg-white">
+  <div className="flex flex-col gap-8 h-full px-4 py-6 ">
+ 
+    <div className="mb-6 px-2">
+      <img src={insta_logo} alt="Instagram Logo" className="w-28" />
+    </div>
 
-export default Sidebar
+   
+    <div className="flex flex-col gap-8 text-[16px] font-medium">
+      <SidebarItem icon={<FiHome size={24} />} text="Home" onClick={() => onClick("home")} />
+      <SidebarItem icon={<FiSearch size={24} />} text="Search" onClick={() => onClick("search")} />
+      <SidebarItem icon={<FiPlusSquare size={24} />} text="Create" onClick={() => onClick("createPost")} />
+      <SidebarItem icon={<FiHeart size={24} />} text="Notifications" onClick={() => onClick("notifications")} />
+      <SidebarItem icon={<FiUser size={24} />} text="Profile" onClick={() => onClick("profile")} />
+      <SidebarItem icon={<FiMenu size={24} />} text="More" onClick={() => onClick("more")} />
+
+    </div>
+
+
+  </div>
+</aside>
+
+  );
+};
+
+
+
+export default Sidebar;
