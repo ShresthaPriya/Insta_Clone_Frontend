@@ -1,6 +1,8 @@
 import React, { useRef, useState } from "react";
 import { FiImage, FiPlay, FiX } from "react-icons/fi";
 import CropPreview from "./ImagePreview";
+import SharePost from "./SharePost";
+
 
 interface CreatePostProps {
   onClose: () => void;
@@ -9,7 +11,7 @@ interface CreatePostProps {
 const CreatePost: React.FC<CreatePostProps> = ({ onClose }) => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [images, setImages] = useState<string[]>([]);
-  const [step, setStep] = useState<"select" | "crop">("select");
+  const [step, setStep] = useState<"select" | "crop"|"share">("select");
 
   const handleSelectClick = () => {
     fileInputRef.current?.click();
@@ -40,12 +42,19 @@ const CreatePost: React.FC<CreatePostProps> = ({ onClose }) => {
       <CropPreview
         images={images}
         onBack={() => setStep("select")}
-        onNext={() => alert("Next step")}
+        onNext={() => setStep("share")}
         onAddMore={handleAddMore}
       />
     );
   }
-
+if (step === "share") {
+  return (
+    <SharePost
+      images={images}
+      onBack={() => setStep("crop")}
+    />
+  );
+}
   return (
    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/70">
       <button
