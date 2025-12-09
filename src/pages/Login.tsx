@@ -50,7 +50,11 @@ const Login = () => {
       setError("password", {
       message: err.response?.data?.message || "Invalid credentials",
     });
-      toast.error(err.response?.data?.message || "Something went wrong!");
+    if (err.response?.status === 409) {
+    toast.error(err.response.data.message || "Account not verified or conflict!");
+  } else {
+    toast.error(err.response?.data?.message || "Something went wrong!");
+  }
     }
   };
   

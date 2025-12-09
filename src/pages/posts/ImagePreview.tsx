@@ -6,7 +6,7 @@ interface CropPreviewProps {
   onBack: () => void;
   onNext: () => void;
   onAddMore: (files: FileList) => void;
-  onRemove?: (index: number) => void;
+  onRemove: (index: number) => void;
 }
 
 const ImagePreview: React.FC<CropPreviewProps> = ({
@@ -22,15 +22,11 @@ const ImagePreview: React.FC<CropPreviewProps> = ({
   const visibleImages = images.slice(startIndex, startIndex + 2);
 
   const handleNext = () => {
-    if (startIndex + 2 < images.length) {
-      setStartIndex(startIndex + 1);
-    }
+    if (startIndex + 2 < images.length) setStartIndex(startIndex + 1);
   };
 
   const handlePrev = () => {
-    if (startIndex > 0) {
-      setStartIndex(startIndex - 1);
-    }
+    if (startIndex > 0) setStartIndex(startIndex - 1);
   };
 
   return (
@@ -42,13 +38,8 @@ const ImagePreview: React.FC<CropPreviewProps> = ({
       </div>
 
       <div className="bg-[#262626] w-[420px] h-[380px] rounded-b-2xl shadow-xl text-white relative overflow-hidden">
-        {images[0] && (
-          <img
-            src={images[0]}
-            className="absolute inset-0 w-full h-full object-cover"
-          />
-        )}
-
+        {images[0] && <img src={images[0]} className="absolute inset-0 w-full h-full object-cover" />}
+        
         {images.length > 1 && (
           <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-black px-4 py-1 rounded-full text-xs text-white">
             Click and drag to reorder
@@ -64,13 +55,9 @@ const ImagePreview: React.FC<CropPreviewProps> = ({
 
         {showPicker && (
           <div className="absolute bottom-20 right-4 bg-black/80 p-3 rounded-xl w-[230px]">
-
             <div className="flex items-center justify-center gap-2 relative">
               {startIndex > 0 && (
-                <button
-                  onClick={handlePrev}
-                  className="absolute -left-4 bg-white rounded-full p-1 shadow text-black"
-                >
+                <button onClick={handlePrev} className="absolute -left-4 bg-white rounded-full p-1 shadow text-black">
                   <FiChevronLeft size={18} />
                 </button>
               )}
@@ -78,16 +65,9 @@ const ImagePreview: React.FC<CropPreviewProps> = ({
               {visibleImages.map((img, index) => {
                 const realIndex = startIndex + index;
                 return (
-                  <div
-                    key={realIndex}
-                    className="relative w-20 h-20 rounded-md overflow-hidden border border-white/20"
-                  >
+                  <div key={realIndex} className="relative w-20 h-20 rounded-md overflow-hidden border border-white/20">
                     <img src={img} className="w-full h-full object-cover" />
-
-                    <button
-                      onClick={() => onRemove?.(realIndex)}
-                      className="absolute top-1 right-1 bg-black/90 p-1 rounded-full"
-                    >
+                    <button onClick={() => onRemove(realIndex)} className="absolute top-1 right-1 bg-black/90 p-1 rounded-full">
                       <FiX size={14} className="text-white" />
                     </button>
                   </div>
@@ -113,10 +93,7 @@ const ImagePreview: React.FC<CropPreviewProps> = ({
               </label>
 
               {startIndex + 2 < images.length && (
-                <button
-                  onClick={handleNext}
-                  className="absolute -right-4 bg-white rounded-full p-1 shadow text-black"
-                >
+                <button onClick={handleNext} className="absolute -right-4 bg-white rounded-full p-1 shadow text-black">
                   <FiChevronRight size={18} />
                 </button>
               )}

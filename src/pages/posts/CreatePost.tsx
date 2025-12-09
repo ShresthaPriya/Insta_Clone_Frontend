@@ -2,98 +2,99 @@ import React, { useRef, useState } from "react";
 import { FiImage, FiPlay, FiX } from "react-icons/fi";
 import CropPreview from "./ImagePreview";
 import SharePost from "./SharePost";
+import type { Post } from "../../components/FeedPosts";
 
+const getUserIdFromToken = () => {
+  const token = localStorage.getItem("accessToken");
+  if (!token) return null;
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    return payload.id;
+  } catch {
+    return null;
+  }
+};
 
 interface CreatePostProps {
   onClose: () => void;
+  onPostCreated: (post: Post) => void;
 }
 
-const CreatePost: React.FC<CreatePostProps> = ({ onClose }) => {
+const CreatePost: React.FC<CreatePostProps> = ({ onClose, onPostCreated }) => {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const [images, setImages] = useState<string[]>([]);
-  const [step, setStep] = useState<"select" | "crop"|"share">("select");
+  const [files, setFiles] = useState<File[]>([]);
+  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
+  const [step, setStep] = useState<"select" | "crop" | "share">("select");
 
-  const handleSelectClick = () => {
-    fileInputRef.current?.click();
-  };
+  const userId = getUserIdFromToken();
+
+  const handleSelectClick = () => fileInputRef.current?.click();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    if (!files.length) return;
+    const selectedFiles = Array.from(e.target.files || []);
+    if (!selectedFiles.length) return;
 
-    if (files.length > 5) {
+    if (selectedFiles.length + files.length > 5) {
       alert("You can only select up to 5 photos.");
       return;
     }
 
-    const urls = files.map((file) => URL.createObjectURL(file));
-    setImages(urls);
+    setFiles((prev) => [...prev, ...selectedFiles].slice(0, 5));
+    const newUrls = selectedFiles.map((file) => URL.createObjectURL(file));
+    setPreviewUrls((prev) => [...prev, ...newUrls].slice(0, 5));
     setStep("crop");
   };
 
-  const handleAddMore = (files: FileList) => {
-    const fileArr = Array.from(files);
+  const handleAddMore = (newFiles: FileList) => {
+    const fileArr = Array.from(newFiles).slice(0, 5 - files.length);
+    setFiles((prev) => [...prev, ...fileArr]);
     const newUrls = fileArr.map((file) => URL.createObjectURL(file));
-    setImages((prev) => [...prev, ...newUrls].slice(0, 5));
+    setPreviewUrls((prev) => [...prev, ...newUrls]);
+  };
+
+  const handleRemove = (index: number) => {
+    setFiles((prev) => prev.filter((_, i) => i !== index));
+    setPreviewUrls((prev) => prev.filter((_, i) => i !== index));
   };
 
   if (step === "crop") {
     return (
       <CropPreview
-        images={images}
+        images={previewUrls}
         onBack={() => setStep("select")}
         onNext={() => setStep("share")}
         onAddMore={handleAddMore}
+        onRemove={handleRemove}
       />
     );
   }
-if (step === "share") {
+
+  if (step === "share") {
+    if (!userId) return <p className="text-white">You must be logged in to share a post.</p>;
+    return <SharePost images={files} userId={userId} onBack={() => setStep("crop")} onPostCreated={onPostCreated} />;
+  }
+
   return (
-    <SharePost
-      images={images}
-      onBack={() => setStep("crop")}
-    />
-  );
-}
-  return (
-   <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/70">
-      <button
-        onClick={onClose}
-        className="absolute top-4 right-4 text-white hover:text-gray-300"
-      >
+    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/70">
+      <button onClick={onClose} className="absolute top-4 right-4 text-white hover:text-gray-300">
         <FiX size={32} />
       </button>
-      <div className="flex justify-center items-center bg-black w-[420px] h-20 rounded-t-2xl  ">
-        <h2 className="text-lg font-sans font-semibold inset-10 text-white">
-          Create new post
-        </h2>
+      <div className="flex justify-center items-center bg-black w-[420px] h-20 rounded-t-2xl">
+        <h2 className="text-lg font-semibold text-white">Create new post</h2>
       </div>
-
-      <div className="bg-[#262626] w-[420px] h-[380px] border-t border-white-500 rounded-b-2xl shadow-xl flex flex-col items-center justify-center text-white relative">
+      <div className="bg-[#262626] w-[420px] h-[380px] border-t border-white/50 rounded-b-2xl shadow-xl flex flex-col items-center justify-center text-white relative">
         <div className="flex items-center justify-center gap-2 mb-6">
           <FiImage size={48} className="text-white" />
           <FiPlay size={48} className="text-white" />
         </div>
-        <p className="font-sans text-[20px] leading-[25px] tracking-[-0.2px] text-white mb-6">
-          Drag photos and videos here
-        </p>
-
-        <input
-          type="file"
-          ref={fileInputRef}
-          onChange={handleFileChange}
-          accept="image/*"
-          className="hidden"
-        />
-        <button
-          onClick={handleSelectClick}
-          className="bg-[#4A5DF9] hover:bg-[#1877F2] transition text-white font-semibold px-6 py-2 rounded-lg"
-        >
+        <p className="text-[20px] mb-6">Drag photos and videos here</p>
+        <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" multiple />
+        <button onClick={handleSelectClick} className="bg-[#4A5DF9] hover:bg-[#1877F2] transition text-white font-semibold px-6 py-2 rounded-lg">
           Select from computer
         </button>
       </div>
     </div>
-  )
+  );
 };
 
 export default CreatePost;

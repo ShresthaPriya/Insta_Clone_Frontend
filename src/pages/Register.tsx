@@ -5,11 +5,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { registrationSchema } from "../validator/formValidation";
 import type { RegisterFormInput } from "../validator/formValidation";
 import { FormButton } from "../components/Button";
-import { Link } from "react-router-dom";
+import { Link, useNavigate} from "react-router-dom";
 import axios from "axios";
 import { toast } from "react-toastify";
 import profile from "../assets/Vector.png";
-import { useState } from "react";
+import { useState} from "react";
 import OtpModal from "./OtpModal";
 
 const Register = () => {
@@ -17,6 +17,7 @@ const Register = () => {
   const [waitTime, setWaitTime] = useState(0);
   const [otpPhone, setOtpPhone] = useState("");
   const [generatedOtp, setGeneratedOtp] = useState("");
+  const navigate = useNavigate()
   const [userData, setUserData] = useState<RegisterFormInput | null>(null);
 
   const { handleSubmit, control, formState: { errors } } = useForm<RegisterFormInput>({
@@ -46,6 +47,11 @@ const Register = () => {
         setGeneratedOtp(result.data.otp);
       }
     } catch (err: any) {
+      if (err.response?.status === 409) {
+    toast.error("User already exists. Please login.");
+    navigate("/login");
+    return;
+  }
       toast.error(err.response?.data?.message || "Error sending OTP");
       setShowOtpModal(false); 
     }
@@ -61,6 +67,7 @@ const Register = () => {
       if (res.data.success) {
         toast.success("OTP verified! Registration complete.");
         setShowOtpModal(false);
+        navigate("/login");
       } else {
         toast.error(res.data.message || "Invalid OTP");
       }
