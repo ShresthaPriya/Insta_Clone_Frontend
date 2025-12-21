@@ -8,19 +8,26 @@ export interface Post {
   user_profile?: string | null;
   created_at: string;
   caption: string;
-  likes: number;
-  comments: number;
-  location?: string | null;
+  likesCount: number;
+  commentsCount: number;
+  likedByCurrentUser: boolean;
 }
 
 interface PostListProps {
   posts: Post[];
+  currentUserId: string;
 }
 
-const FeedPosts = ({ posts = [] }: PostListProps) => {
+const FeedPosts = ({ posts = [], currentUserId }: PostListProps) => {
   return (
     <div className="flex flex-col gap-6 pb-20">
-      {posts.map((post) => (post ? <PostCard key={post.id} data={post} /> : null))}
+      {posts.map((post) => (
+        <PostCard
+          key={post.id}
+          data={post}
+          currentUserId={currentUserId}
+        />
+      ))}
     </div>
   );
 };

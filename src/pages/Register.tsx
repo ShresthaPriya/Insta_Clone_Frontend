@@ -11,6 +11,7 @@ import { toast } from "react-toastify";
 import profile from "../assets/Vector.png";
 import { useState} from "react";
 import OtpModal from "./OtpModal";
+import { FaEye, FaEyeSlash } from "react-icons/fa";
 
 const Register = () => {
   const [showOtpModal, setShowOtpModal] = useState(false);
@@ -19,43 +20,48 @@ const Register = () => {
   const [generatedOtp, setGeneratedOtp] = useState("");
   const navigate = useNavigate()
   const [userData, setUserData] = useState<RegisterFormInput | null>(null);
+const [viewPassword, setViewPassword] = useState(false);
 
   const { handleSubmit, control, formState: { errors } } = useForm<RegisterFormInput>({
     resolver: zodResolver(registrationSchema),
   });
 
-  const onSubmit: SubmitHandler<RegisterFormInput> = async (data) => {
-    try {
-      setOtpPhone(data.phoneNumber);
-      setUserData(data);
-      setShowOtpModal(true);
-
-      const result = await axios.post("http://localhost:4000/api/v1/otp/generate-otp", {
+ const onSubmit: SubmitHandler<RegisterFormInput> = async (data) => {
+  try {
+    const result = await axios.post("http://localhost:4000/api/v1/otp/generate-otp", {
+      phoneNumber: data.phoneNumber,
+      userInfo: {
+        fullName: data.fullname,
+        userName: data.username,
         phoneNumber: data.phoneNumber,
-        userInfo: {
-          fullName: data.fullname,
-          userName: data.username,
-          phoneNumber: data.phoneNumber,
-          password: data.password
-        }
-      });
+        password: data.password,
+      },
+    });
 
-      setWaitTime(result.data.waitSeconds);
-
-      if (result.data.success) {
-        toast.success("OTP sent successfully!");
-        setGeneratedOtp(result.data.otp);
-      }
-    } catch (err: any) {
-      if (err.response?.status === 409) {
-    toast.error("User already exists. Please login.");
-    navigate("/login");
-    return;
-  }
-      toast.error(err.response?.data?.message || "Error sending OTP");
-      setShowOtpModal(false); 
+    if (!result.data.success) {
+      toast.error(result.data.message || "Cannot send OTP");
+      return; 
     }
-  };
+
+    setOtpPhone(data.phoneNumber);
+    setUserData(data);
+    setShowOtpModal(true);
+    setWaitTime(result.data.waitSeconds);
+    setGeneratedOtp(result.data.otp);
+    toast.success("OTP sent successfully!");
+
+  } catch (err: any) {
+    // Handle server errors
+    if (err.response?.status === 409 || err.response?.data?.message?.includes("already registered")) {
+      toast.error("User already exists. Please login.");
+      navigate("/login");
+      return;
+    }
+
+    toast.error(err.response?.data?.message || "Error sending OTP");
+  }
+};
+
 
   const handleVerifyOtp = async (enteredOtp: string) => {
     if (!userData) return;
@@ -76,27 +82,35 @@ const Register = () => {
     }
   };
 
-  const handleResendOtp = async () => {
-    if (!userData) return "";
-    try {
-      const res = await axios.post("http://localhost:4000/api/v1/otp/generate-otp", {
-        phoneNumber: otpPhone,
-        userInfo: {
-          fullName: userData.fullname,
-          userName: userData.username,
-          phoneNumber: otpPhone,
-          password: userData.password
-        }
-      });
+const handleResendOtp = async () => {
+  if (!userData) return "";
 
-      setGeneratedOtp(res.data.otp);
-      setWaitTime(res.data.waitSeconds);
-      return res.data.otp;
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || "Failed to resend OTP");
+  try {
+    const res = await axios.post("http://localhost:4000/api/v1/otp/generate-otp", {
+      phoneNumber: otpPhone,
+      userInfo: {
+        fullName: userData.fullname,
+        userName: userData.username,
+        phoneNumber: otpPhone,
+        password: userData.password
+      }
+    });
+
+    if (!res.data.success) {
+      toast.error(res.data.message || "Cannot resend OTP yet");
       return "";
     }
-  };
+
+    setGeneratedOtp(res.data.otp);
+    setWaitTime(res.data.waitSeconds);
+    return res.data.otp;
+
+  } catch (err: any) {
+    toast.error(err.response?.data?.message || "Failed to resend OTP");
+    return "";
+  }
+};
+
 
   return (
     <>
@@ -111,7 +125,7 @@ const Register = () => {
         />
       )}
 
-      <div className="flex flex-col justify-center items-center p-4 gap-8 h-screen">
+      <div className="flex flex-col justify-center items-center p-4 gap-8 h-screen ">
         <img src={profile} alt="Logo" className="object-contain" />
 
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6 w-sm">
@@ -151,15 +165,26 @@ const Register = () => {
             )}
           />
 
-          <Controller
+            <Controller
             name="password"
             control={control}
             defaultValue=""
             render={({ field }) => (
-              <>
-                <InputForm type="password" placeholder="Password" {...field} />
+              <div className="relative">
+                <InputForm
+                  type={viewPassword ? "text" : "password"}
+                  placeholder="Password"
+                  {...field}
+                />
+                <button
+                  type="button"
+                  onClick={() => setViewPassword(prev => !prev)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500"
+                >
+                  {viewPassword ? <FaEyeSlash /> : <FaEye />}
+                </button>
                 {errors.password && <FormMessage variant="error" message={errors.password.message} />}
-              </>
+              </div>
             )}
           />
 

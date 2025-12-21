@@ -1,18 +1,14 @@
-import { useEffect, useState } from "react";
-import Sidebar from "../components/Sidebar";
+import { useEffect } from "react";
+import { useOutletContext } from "react-router-dom";
 import Story from "../components/Story";
-import CreatePost from "./posts/CreatePost";
-import FeedPosts, { type Post } from "../components/FeedPosts";
-import axios from "axios";
+import FeedPosts from "../components/FeedPosts";
+import Suggestions from "../components/Suggestions";
+import api from "../utils/api";
 import demo from "../assets/pi.jpg";
 
 const Home = () => {
-  const [showCreatePost, setShowCreatePost] = useState(false);
-  const [posts, setPosts] = useState<Post[]>([]);
-
-  useEffect(() => {
-    document.body.style.overflow = showCreatePost ? "hidden" : "auto";
-  }, [showCreatePost]);
+  const { posts, setPosts } = useOutletContext<any>();
+  const currentUserId = localStorage.getItem("userId") || "";
 
   useEffect(() => {
     fetchFeed();
@@ -20,72 +16,37 @@ const Home = () => {
 
   const fetchFeed = async () => {
     try {
-      const token = localStorage.getItem("accessToken");
-      const res = await axios.get("http://localhost:4000/api/v1/posts/feed", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      console.log("Feed response:", res.data);
-
-      const postsArray: any[] = Array.isArray(res.data) ? res.data : [];
-
-      const mappedPosts: Post[] = postsArray.map((p: any) => ({
+      const res = await api.get("/posts/feed");
+      const mapped = res.data.map((p: any) => ({
         id: p.id,
-        username: p.user?.userName || `User-${p.userId.slice(0, 6)}`,
- images: p.urls?.length
-    ? p.urls.map((url: string) => `http://localhost:4000${url}`) 
-    : [demo],
+        username: p.user?.userName,
+        images: p.urls?.length
+          ? p.urls.map((u: string) => `http://localhost:4000${u}`)
+          : [demo],
         user_id: p.userId,
-        user_profile: p.user?.userProfile || [demo],
+        user_profile: p.user?.user_profile || demo,
         created_at: p.createdAt,
         caption: p.caption,
-        likes: p.likes ?? 0,
-        comments: p.comments ?? 0,
-        location: p.location || null,
+        likesCount: p.likesCount ?? 0,
+        commentsCount: p.commentsCount ?? 0,
+        likedByCurrentUser:
+          p.likes?.some((l: any) => l.userId === currentUserId) ?? false,
       }));
-
-      setPosts(mappedPosts);
-    } catch (err) {
-      console.error("Failed to load feed:", err);
-      setPosts([]);
+      setPosts(mapped);
+    } catch (e) {
+      console.error(e);
     }
   };
 
-  const handlePostCreated = (newPost: Post) => {
-    setPosts((prev) => [newPost, ...prev]);
-    setShowCreatePost(false);
-    document.querySelector("#feed-container")?.scrollIntoView({ behavior: "smooth" });
-  };
-
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      <Sidebar
-        onClick={(page) => {
-          if (page === "createPost") setShowCreatePost(true);
-        }}
-      />
-
-      <div className="flex-1 flex justify-center relative">
-        <div className="w-full max-w-[470px] px-2" id="feed-container">
-          <Story />
-          <FeedPosts posts={posts} />
-        </div>
-
-        {showCreatePost && (
-          <>
-            <div
-              onClick={() => setShowCreatePost(false)}
-              className="fixed inset-0 bg-black/60 z-40"
-            />
-            <div className="fixed inset-0 z-50 flex items-center justify-center">
-              <CreatePost onPostCreated={handlePostCreated} onClose={() => setShowCreatePost(false)} />
-            </div>
-          </>
-        )}
+    <div className="flex justify-around gap-4">
+      <div className="w-full max-w-[600px] mt-6">
+        <Story />
+        <FeedPosts posts={posts} currentUserId={currentUserId} />
       </div>
+      <Suggestions />
     </div>
   );
 };
 
 export default Home;
-

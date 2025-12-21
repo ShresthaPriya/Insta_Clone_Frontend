@@ -9,6 +9,8 @@ interface InputFormProps extends React.InputHTMLAttributes<HTMLInputElement> {
   InputBorder?: "none" | "thin" | "thick" | "normal" | "btnShadow" | "profileBorder";
   isFocused?: boolean;
   className?: string;
+  value?: string;           // <-- ensure value is accepted
+  onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void; // <-- forward onChange
 }
 
 const inputForm = tv({
@@ -29,12 +31,14 @@ const inputForm = tv({
 });
 
 const InputForm = ({
-  type,
+  type = "text",
   label,
   placeholder,
   className,
   InputBorder,
   isFocused = false,
+  value,
+  onChange,
   ...props
 }: InputFormProps) => {
   return (
@@ -46,13 +50,15 @@ const InputForm = ({
       )}
 
       <input
+        type={type}
+        placeholder={placeholder}
+        value={value ?? ""}       // <-- ensures controlled input
+        onChange={onChange}       // <-- ensures React Hook Form works
         className={clsx(
           inputForm({ InputBorder }),
           isFocused && "focus:border-indigo-500",
           className
         )}
-        type={type}
-        placeholder={placeholder}
         {...props}
       />
     </div>

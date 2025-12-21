@@ -1,99 +1,158 @@
-
 import React, { useState } from "react";
-import { FiArrowLeft, FiMapPin, FiChevronRight, FiChevronLeft } from "react-icons/fi";
+import {
+  FiArrowLeft,
+  FiMapPin,
+  FiChevronRight,
+  FiChevronLeft,
+  FiX,
+} from "react-icons/fi";
 import axios from "axios";
-import demo from "../../assets/pi.jpg";
+import CustomImage from "../../components/CustomImage";
 import type { Post } from "../../components/FeedPosts";
+import { toast } from "react-toastify";
 
 interface SharePostProps {
   images: File[];
   userId: string;
+  username: string;
+  user_profile?: string | null;
+  onClose: () => void;
   onBack: () => void;
   onPostCreated: (post: Post) => void;
 }
 
-const SharePost: React.FC<SharePostProps> = ({ images, userId, onBack, onPostCreated }) => {
+const BACKEND_URL = "http://localhost:4000";
+
+const SharePost: React.FC<SharePostProps> = ({
+  images,
+  userId,
+  username,
+  user_profile,
+  onBack,
+  onPostCreated,
+  onClose,
+}) => {
   const [current, setCurrent] = useState(0);
   const [caption, setCaption] = useState("");
+  const [isSharing, setIsSharing] = useState(false);
 
-  const nextImage = () => current < images.length - 1 && setCurrent(current + 1);
+  const nextImage = () =>
+    current < images.length - 1 && setCurrent(current + 1);
   const prevImage = () => current > 0 && setCurrent(current - 1);
 
   const handleShare = async () => {
-    if (!userId) return alert("User not logged in");
-
+    if (!userId) return toast.error("User not logged in");
     try {
-      const accessToken = localStorage.getItem("accessToken");
-      if (!accessToken) return alert("You must be logged in!");
+      setIsSharing(true);
+      const token = localStorage.getItem("accessToken");
+      if (!token) return toast.error("You must be logged in");
 
       const formData = new FormData();
       images.forEach((file) => formData.append("images", file));
       formData.append("caption", caption);
-      formData.append("userId", userId);
 
-      const res = await axios.post("http://localhost:4000/api/v1/posts/create", formData, {
-        headers: { "Content-Type": "multipart/form-data", Authorization: `Bearer ${accessToken}` },
-      });
+      const res = await axios.post(
+        `${BACKEND_URL}/api/v1/posts/create`,
+        formData,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
-      const createdPost = res.data.data;
+      const createdPost = res.data?.post || res.data?.data || res.data;
 
-   const newPost: Post = {
-  id: createdPost.id,
-  username: createdPost.user?.userName || `User-${createdPost.userId.slice(0, 6)}`,
-  images: createdPost.urls?.length ? createdPost.urls.map((url: string) => `http://localhost:4000${url}`) : [demo],
-  user_id: createdPost.userId,
-  user_profile: createdPost.user?.userProfile || demo,
-  created_at: createdPost.createdAt,
-  caption: createdPost.caption,
-  likes: createdPost.likes ?? 0,
-  comments: createdPost.comments ?? 0,
-  location: createdPost.location || null,
-};
-
+      const newPost: Post = {
+        id: createdPost.id || createdPost._id,
+        username: createdPost.user?.username || username,
+        images: createdPost.urls?.length
+          ? createdPost.urls.map((url: string) => `${BACKEND_URL}${url}`)
+          : [],
+        user_id: createdPost.userId,
+        user_profile: createdPost.user?.userProfile || user_profile,
+        created_at: createdPost.createdAt || new Date().toISOString(),
+        caption: createdPost.caption || "",
+        likesCount: 0,
+        commentsCount: 0,
+        likedByCurrentUser: false,
+      };
 
       onPostCreated(newPost);
+      toast.success("Post shared successfully!");
       onBack();
-      alert("Post shared successfully!");
     } catch (err: any) {
       console.error(err.response?.data || err.message);
-      alert("Failed to share post.");
+      toast.error("Failed to share post");
+    } finally {
+      setIsSharing(false);
     }
   };
 
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-      <div className="bg-[#1c1c1c] w-[820px] h-[560px] rounded-xl overflow-hidden flex flex-col">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700 text-white">
-          <button onClick={onBack}><FiArrowLeft size={20} /></button>
+      <button onClick={onClose} className="absolute top-4 right-4 text-white hover:text-gray-300">
+        <FiX size={32} />
+      </button>
+
+      <div className="relative bg-[#fafafa] w-[420px] rounded-xl overflow-hidden flex flex-col md:w-[820px]">
+        {isSharing && (
+          <div className="absolute inset-0 bg-white/70 flex flex-col items-center justify-center z-100">
+            <div className="w-12 h-12 border-4 border-gray-400 border-t-transparent rounded-full animate-spin" />
+            <p className="text-black mt-4 text-sm">Sharing</p>
+          </div>
+        )}
+
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-400 text-black">
+          <button onClick={onBack}>
+            <FiArrowLeft size={20} />
+          </button>
           <h2 className="font-semibold">Create new post</h2>
-          <button onClick={handleShare} className="text-blue-500 font-semibold">Share</button>
+          <button
+            onClick={handleShare}
+            disabled={isSharing}
+            className={`font-semibold ${isSharing ? "text-black-500" : "text-blue-500"}`}
+          >
+            {isSharing ? "Sharing..." : "Share"}
+          </button>
         </div>
 
-        <div className="flex flex-1">
-          <div className="w-[60%] bg-black relative flex items-center justify-center">
-<img
-  src={
-    images[current] instanceof File
-      ? URL.createObjectURL(images[current])
-      : images[current] // already a URL
-  }
-  alt={`Slide ${current + 1}`}
-  className="w-full h-full object-cover"
-/>
-            {current > 0 && <button onClick={prevImage} className="absolute left-4 bg-black/70 rounded-full p-2"><FiChevronLeft size={20} className="text-white" /></button>}
-            {current < images.length - 1 && <button onClick={nextImage} className="absolute right-4 bg-black/70 rounded-full p-2"><FiChevronRight size={20} className="text-white" /></button>}
-            <div className="absolute bottom-4 flex gap-2 z-10">
-              {images.map((_, i) => <div key={i} className={`w-5 h-5 rounded-full ${i === current ? "bg-blue-500" : "bg-gray-500"}`} />)}
-            </div>
+        <div className="flex flex-col md:flex-row flex-1">
+          <div className="w-full h-[250px] bg-white relative flex items-center justify-center md:w-[60%] md:h-[500px]">
+            <img
+              src={URL.createObjectURL(images[current])}
+              alt={`Slide ${current + 1}`}
+              className="w-full h-full object-cover"
+            />
+            {current > 0 && (
+              <button onClick={prevImage} className="absolute left-4 bg-white/70 rounded-full p-2">
+                <FiChevronLeft size={20} className="text-black" />
+              </button>
+            )}
+            {current < images.length - 1 && (
+              <button onClick={nextImage} className="absolute right-4 bg-white/70 rounded-full p-2">
+                <FiChevronRight size={20} className="text-black" />
+              </button>
+            )}
           </div>
 
-          <div className="w-[40%] bg-[#262626] text-white p-4 flex flex-col">
+          <div className="w-full bg-[#fafafa] text-black p-4 flex flex-col md:w-[40%]">
+            <div className="flex items-center gap-3 mb-4">
+              <CustomImage
+                imgSrc={
+                  user_profile
+                    ? `${BACKEND_URL}/uploads/${user_profile}?t=${Date.now()}`
+                    : undefined
+                }
+                fallBack={undefined}
+                className="w-8 h-8 rounded-full object-cover"
+                alt={username}
+              />
+
+              <span className="text-sm font-semibold">{username}</span>
+            </div>
             <textarea
               value={caption}
               onChange={(e) => setCaption(e.target.value)}
               maxLength={2000}
               placeholder="Write a caption..."
-              className="w-full h-40 resize-none outline-none bg-transparent border-b border-gray-600 text-sm text-white placeholder:text-gray-400"
+              className="w-full h-20 resize-none bg-transparent border-b border-gray-600 outline-none text-sm placeholder:text-gray-400 md:h-40"
             />
 
             <div className="flex items-center gap-2 mt-4 text-sm text-gray-300 cursor-pointer">
@@ -108,4 +167,3 @@ const SharePost: React.FC<SharePostProps> = ({ images, userId, onBack, onPostCre
 };
 
 export default SharePost;
-

@@ -1,7 +1,4 @@
 import React, { useState } from "react";
-import defaultStoryBorder from "../assets/story-out.png";
-import storyBorderAnimation from "../assets/story-out-animation.gif";
-import storyBorderPassive from "../assets/story-out-passive.png";
 
 interface Props {
   profilePicture: string;
@@ -16,27 +13,29 @@ const StoryElement: React.FC<Props> = ({
 }) => {
   const [isOpened, setOpened] = useState(false);
 
-  const getBorder = () => {
-    if (checkOpen) return storyBorderPassive;
-    if (isOpened) return storyBorderAnimation;
-    return defaultStoryBorder;
-  };
+  const isSeen = checkOpen || isOpened;
 
   return (
-    <div className="flex flex-col items-center w-[72px]">
-      <div className="relative w-[66px] h-[66px]">
-        <img
-          src={getBorder()}
-          alt="border"
-          className="absolute inset-0 w-full h-full"
-        />
-        <img
-          src={profilePicture}
-          alt="pp"
-          onClick={() => setOpened(true)}
-          className="absolute inset-[4px] w-[58px] h-[58px] rounded-full object-cover cursor-pointer"
-        />
+    <div className="flex flex-col items-center w-[72px] shrink-0">
+      <div
+        onClick={() => setOpened(true)}
+        className={`w-[62px] h-[62px] aspect-square p-0.5
+          rounded-full cursor-pointer
+          ${
+            isSeen
+              ? "bg-gray-300"
+              : "bg-linear-to-tr from-[#FEDA75] via-[#D62976] to-[#4F5BD5]"
+          }`}
+      >
+        <div className="w-full h-full bg-white p-0.5 rounded-full aspect-square">
+          <img
+            src={profilePicture}
+            alt="story"
+            className="w-full h-full rounded-full object-cover aspect-square"
+          />
+        </div>
       </div>
+
 
       <p className="mt-1 text-xs truncate w-full text-center">
         {children}

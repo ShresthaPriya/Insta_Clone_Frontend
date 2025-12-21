@@ -3,6 +3,7 @@ import { FiCopy, FiPlus, FiX, FiChevronRight, FiChevronLeft } from "react-icons/
 
 interface CropPreviewProps {
   images: string[];
+   onClose: () => void;
   onBack: () => void;
   onNext: () => void;
   onAddMore: (files: FileList) => void;
@@ -15,6 +16,7 @@ const ImagePreview: React.FC<CropPreviewProps> = ({
   onNext,
   onAddMore,
   onRemove,
+  onClose,
 }) => {
   const [showPicker, setShowPicker] = useState(false);
   const [startIndex, setStartIndex] = useState(0);
@@ -31,17 +33,20 @@ const ImagePreview: React.FC<CropPreviewProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/70 flex flex-col items-center justify-center">
-      <div className="flex justify-between items-center bg-black w-[420px] h-20 rounded-t-2xl px-4">
-        <button onClick={onBack} className="text-xl text-white">←</button>
-        <h2 className="text-white font-semibold">Crop</h2>
+       <button onClick={onClose} className="absolute top-4 right-4 text-white hover:text-gray-300">
+              <FiX size={32} />
+            </button>
+      <div className="flex justify-between items-center bg-white w-[420px] h-20 rounded-t-2xl px-4">
+        <button onClick={onBack} className="text-xl text-black">←</button>
+        <h2 className="text-black font-semibold">Crop</h2>
         <button onClick={onNext} className="text-blue-500 font-semibold">Next</button>
       </div>
 
-      <div className="bg-[#262626] w-[420px] h-[380px] rounded-b-2xl shadow-xl text-white relative overflow-hidden">
+      <div className="bg-[#262626] w-[420px] h-[380px] rounded-b-2xl shadow-xl text-black relative overflow-hidden">
         {images[0] && <img src={images[0]} className="absolute inset-0 w-full h-full object-cover" />}
         
         {images.length > 1 && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-black px-4 py-1 rounded-full text-xs text-white">
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-black px-4 py-1 rounded-full text-xs text-black">
             Click and drag to reorder
           </div>
         )}
@@ -50,7 +55,7 @@ const ImagePreview: React.FC<CropPreviewProps> = ({
           onClick={() => setShowPicker((prev) => !prev)}
           className="absolute bottom-4 right-4 bg-black/70 p-3 rounded-full hover:bg-black"
         >
-          <FiCopy className="text-white text-xl" />
+          <FiCopy className="text-black text-xl" />
         </button>
 
         {showPicker && (

@@ -1,36 +1,36 @@
-
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
-import Register from "./pages/Register";
 import RootLayout from "./pages/RootLayout";
+import AuthLayout from "./pages/AuthLayout";
+import Register from "./pages/Register";
 import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
-import OtpModal from "./pages/OtpModal";
-import {EditProfile} from "./pages/EditProfile"
+import { EditProfile } from "./pages/EditProfile";
 import Home from "./pages/Home";
-
+import Profile from "./pages/Profile";
 
 const router = createBrowserRouter([
   {
     path: "/",
-    element: <RootLayout />,
+    element: <RootLayout />, 
     children: [
       { index: true, element: <Home /> },
+      { path: "edit-profile", element: <EditProfile /> },
+      { path: "profile/:userName", element: <Profile /> },
+    ],
+  },
+  {
+    path: "/",
+    element: <AuthLayout />, 
+    children: [
       { path: "register", element: <Register /> },
       { path: "login", element: <Login /> },
       { path: "reset-password", element: <ResetPassword /> },
-      { path: "otp", element: <OtpModal /> },
-      { path: "edit-profile", element: <EditProfile /> },
     ],
   },
 ]);
 
-
 const App = () => {
-
-
   return <RouterProvider router={router} />;
-
 };
 
-
-export default App
+export default App;
