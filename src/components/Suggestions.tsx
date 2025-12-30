@@ -2,14 +2,15 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../utils/api";
 import CustomImage from "../components/CustomImage";
-import fallbackImg from "../assets/pi.jpg"; 
+import fallbackImg from "../assets/pi.jpg";
 
 interface SuggestionUser {
   id: string;
   userName: string;
   fullName: string;
   user_profile?: string;
-  isFollowing?: boolean;
+  isFollowing: boolean;
+  isRequested: boolean;
 }
 
 const BACKEND_URL = "http://localhost:4000";
@@ -21,7 +22,7 @@ const Suggestions = () => {
 
   const fetchSuggestions = async () => {
     try {
-      const res = await api.get("/user/suggestions", {
+      const res = await api.get("/follow/suggestions", {
         headers: { Authorization: `Bearer ${token}` },
       });
       setSuggestions(res.data);
@@ -37,7 +38,7 @@ const Suggestions = () => {
   const handleFollowToggle = async (userId: string) => {
     try {
       const res = await api.post(
-        `/user/${userId}/follow`,
+        `/follow/${userId}/follow`,
         {},
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -46,11 +47,17 @@ const Suggestions = () => {
 
       setSuggestions((prev) =>
         prev.map((u) =>
-          u.id === userId ? { ...u, isFollowing: res.data.following } : u
+          u.id === userId
+            ? {
+                ...u,
+                isFollowing: res.data.following,
+                isRequested: res.data.requested ?? false,
+              }
+            : u
         )
       );
     } catch (err) {
-      console.error("Failed to follow/unfollow user", err);
+      console.error("Follow/unfollow failed", err);
     }
   };
 
@@ -60,7 +67,6 @@ const Suggestions = () => {
         <p className="text-gray-500 font-semibold text-sm">
           Suggestions for you
         </p>
-        <button className="text-black text-xs font-semibold">See All</button>
       </div>
 
       <div className="flex flex-col gap-4">
@@ -73,7 +79,7 @@ const Suggestions = () => {
               <CustomImage
                 imgSrc={
                   user.user_profile
-                    ? `${BACKEND_URL}/uploads/${user.user_profile}?t=${Date.now()}`
+                    ? `${BACKEND_URL}/uploads/${user.user_profile}`
                     : fallbackImg
                 }
                 fallBack={fallbackImg}
@@ -87,17 +93,24 @@ const Suggestions = () => {
             </div>
 
             <button
+              disabled={user.isRequested}
               className={`text-sm font-semibold px-3 py-1 rounded-md ${
                 user.isFollowing
                   ? "bg-gray-100 text-black"
+                  : user.isRequested
+                  ? "bg-gray-200 text-gray-500 cursor-not-allowed"
                   : "bg-blue-600 text-white"
               }`}
               onClick={(e) => {
-                e.stopPropagation(); 
+                e.stopPropagation();
                 handleFollowToggle(user.id);
               }}
             >
-              {user.isFollowing ? "Following" : "Follow"}
+              {user.isFollowing
+                ? "Following"
+                : user.isRequested
+                ? "Requested"
+                : "Follow"}
             </button>
           </div>
         ))}

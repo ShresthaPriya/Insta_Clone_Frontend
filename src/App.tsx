@@ -7,6 +7,8 @@ import ResetPassword from "./pages/ResetPassword";
 import { EditProfile } from "./pages/EditProfile";
 import Home from "./pages/Home";
 import Profile from "./pages/Profile";
+import AccountSettings from "./pages/AccountSettings";
+import {Notifications} from "./components/Notifications";
 
 const router = createBrowserRouter([
   {
@@ -16,7 +18,9 @@ const router = createBrowserRouter([
       { index: true, element: <Home /> },
       { path: "edit-profile", element: <EditProfile /> },
       { path: "profile/:userName", element: <Profile /> },
-    ],
+      {path:"/account-settings", element:<AccountSettings />},
+      { path: "/notifications", element: <Notifications/>}
+    ]
   },
   {
     path: "/",

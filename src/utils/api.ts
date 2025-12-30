@@ -3,7 +3,7 @@ import { getAccessToken, getRefreshToken, setTokens, removeTokens } from "./auth
 
 const api = axios.create({
   baseURL: "http://localhost:4000/api/v1",
-  headers: { "Content-Type": "application/json" },
+  // headers: { "Content-Type": "application/json" },
 });
 
 api.interceptors.request.use(
@@ -60,5 +60,6 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+// export const BASE_URL = "http://localhost:4000";
 
 export default api;

@@ -6,6 +6,8 @@ import SearchModal from "../components/SearchModal";
 import LogoutModal from "../components/LogoutModal";
 import api from "../utils/api";
 import { ToastContainer } from "react-toastify";
+import { socket } from "../socket/socket";
+
 
 const RootLayout = () => {
   const navigate = useNavigate();
@@ -14,6 +16,30 @@ const RootLayout = () => {
   const [showSearch, setShowSearch] = useState(false);
   const [showLogout, setShowLogout] = useState(false);
   const [posts, setPosts] = useState<any[]>([]);
+
+useEffect(() => {
+  const connectSocket = async () => {
+    try {
+      const res = await api.get("/user/me");
+      const userId = res.data.id;
+
+      socket.connect();
+      socket.emit("join", userId);
+
+      console.log("Socket connected for user:", userId);
+    } catch (err) {
+      console.log("Socket connection failed");
+    }
+  };
+
+  connectSocket();
+
+  return () => {
+    socket.disconnect();
+    console.log("Socket disconnected");
+  };
+}, []);
+
 
   useEffect(() => {
     document.body.style.overflow =
@@ -24,6 +50,8 @@ const RootLayout = () => {
     const res = await api.get("/user/me");
     navigate(`/profile/${res.data.userName}`);
   };
+
+  
 
   const handleLogout = async () => {
     try {
@@ -49,6 +77,9 @@ const RootLayout = () => {
     else if (page === "logout") {
       setShowLogout(true);
     }
+    else if (page === "notifications") {
+    navigate("/notifications"); 
+  }
   };
 
   return (

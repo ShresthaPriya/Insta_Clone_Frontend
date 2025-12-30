@@ -1,20 +1,24 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import axios from "axios";
-import CustomImage from "../components/CustomImage";
-import CommentsModal from "../components/CommentsModal";
-import { FiGrid, FiTag, FiMessageCircle } from "react-icons/fi";
-import { FaHeart } from "react-icons/fa";
-import FollowersModal from "../components/FollowModal";
 import api from "../utils/api";
+import CustomImage from "../components/CustomImage";
+import FollowModal, { CancelRequestModal } from "../components/FollowModal";
+import { FiSettings, FiLock } from "react-icons/fi";
+import { FaHeart } from "react-icons/fa";
+import { FiMessageCircle } from "react-icons/fi";
+import { socket } from "../socket/socket";
+import CommentsModal from "../components/CommentsModal";
 
 interface Post {
   id: string;
   urls: string[];
+  user_profile: string;
+  username: string;
   images: string[];
   likesCount?: number;
   likedByCurrentUser?: boolean;
   commentsCount?: number;
+  isDeleted?: boolean;
 }
 
 interface UserProfile {
@@ -22,133 +26,218 @@ interface UserProfile {
   userName: string;
   fullName: string;
   user_profile?: string | null;
+  bio?: string;
   posts: Post[];
-  isFollowing?: boolean;
-  followersCount?: number;
-  followingCount?: number;
-  bio: string;
+  isPrivate: boolean;
+  isFollowing: boolean;
+  isRequested: boolean;
+  followersCount: number;
+  followingCount: number;
 }
 
-interface Me {
-  id: string;
-  userName: string;
-}
+type FollowState = "FOLLOW" | "REQUESTED" | "FOLLOWING";
 
-const BACKEND_URL = "http://localhost:4000"; // replace with your backend URL
+const BACKEND_URL = "http://localhost:4000";
 
 const Profile = () => {
   const { userName } = useParams();
   const navigate = useNavigate();
+  const token = localStorage.getItem("accessToken");
 
-  const [me, setMe] = useState<Me | null>(null);
+  const [meId, setMeId] = useState<string | null>(null);
   const [user, setUser] = useState<UserProfile | null>(null);
+  const [followState, setFollowState] = useState<FollowState>("FOLLOW");
   const [loading, setLoading] = useState(true);
 
-  const [activeTab, setActiveTab] = useState<"posts" | "tagged">("posts");
+  const [showFollowers, setShowFollowers] = useState(false);
+  const [showFollowing, setShowFollowing] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedPostIndex, setSelectedPostIndex] = useState(0);
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [postComments, setPostComments] = useState<any[]>([]);
-  const [showFollowers, setShowFollowers] = useState(false);
-  const [showFollowing, setShowFollowing] = useState(false);
-  const token = localStorage.getItem("accessToken");
 
   useEffect(() => {
-    const fetchMe = async () => {
-      try {
-        const res = await api.get(`/user/me`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setMe(res.data);
-      } catch {}
-    };
-    fetchMe();
-  }, []);
+    api
+      .get("/user/me", { headers: { Authorization: `Bearer ${token}` } })
+      .then((res) => setMeId(res.data.id));
+  }, [token]);
 
-  const fetchProfile = async () => {
+  const fetchProfile = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.get(
-        `/user/${userName}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const res = await api.get(`/user/${userName}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
-      setUser({
-        ...res.data,
-        posts: res.data.posts.map((p: any) => ({
+      const filteredPosts = (res.data.posts || [])
+        .filter((p: any) => !p.deletedAt)
+        .map((p: any) => ({
           ...p,
           images: p.urls.map((u: string) => `${BACKEND_URL}${u}`),
-        })),
-      });
+          user_profile: p.user_profile
+            ? `${BACKEND_URL}/uploads/${p.user_profile}`
+            : "/avatar.png",
+        }));
+
+      setUser({ ...res.data, posts: filteredPosts });
+    } catch (err) {
+      console.error(err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [userName, token]);
 
   useEffect(() => {
     fetchProfile();
-  }, [userName]);
+  }, [fetchProfile]);
 
-  const isOwnProfile = me?.id === user?.id;
+  useEffect(() => {
+    if (!user) return;
+    if (user.isFollowing) setFollowState("FOLLOWING");
+    else if (user.isRequested) setFollowState("REQUESTED");
+    else setFollowState("FOLLOW");
+  }, [user]);
 
-  const handleFollowToggle = async () => {
-    if (!user || !me) return;
+  useEffect(() => {
+    if (!user || !meId) return;
 
-    try {
-      const res = await api.post(
-        `/user/${user.id}/follow`,
+    const handler = (data: any) => {
+      if (data.type === "FOLLOW_ACCEPTED" && data.receiverId === meId) {
+        setUser((prev) =>
+          prev ? { ...prev, isFollowing: true, isRequested: false } : prev
+        );
+        setFollowState("FOLLOWING");
+      }
+
+      if (data.type === "UNFOLLOW" && data.receiverId === user.id) {
+        setUser((prev) =>
+          prev ? { ...prev, followersCount: prev.followersCount - 1 } : prev
+        );
+      }
+    };
+
+    socket.on("notification", handler);
+    return () => socket.off("notification", handler);
+  }, [user, meId]);
+
+  const handleFollow = async () => {
+    if (!user) return;
+
+    if (followState === "REQUESTED") {
+      setShowCancelModal(true);
+      return;
+    }
+
+    if (followState === "FOLLOWING") {
+      await api.post(
+        `/follow/${user.id}/unfollow`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
-
       setUser((prev) =>
         prev
-          ? {
-              ...prev,
-              isFollowing: res.data.following,
-              followersCount: res.data.following
-                ? (prev.followersCount || 0) + 1
-                : Math.max((prev.followersCount || 1) - 1, 0),
-            }
+          ? { ...prev, isFollowing: false, followersCount: prev.followersCount - 1 }
           : prev
       );
-    } catch {}
+      setFollowState("FOLLOW");
+      return;
+    }
+
+    await api.post(
+      `/follow/${user.id}/follow`,
+      {},
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    setUser((prev) =>
+      prev
+        ? {
+          ...prev,
+          isRequested: prev.isPrivate,
+          isFollowing: !prev.isPrivate,
+          followersCount: prev.isPrivate
+            ? prev.followersCount
+            : prev.followersCount + 1,
+        }
+        : prev
+    );
+
+    setFollowState(user.isPrivate ? "REQUESTED" : "FOLLOWING");
+  };
+
+  const confirmCancelRequest = async () => {
+    if (!user) return;
+
+    await api.delete(`/follow/${user.id}/follow-request/cancel`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    setUser((prev) =>
+      prev
+        ? { ...prev, isRequested: false, followersCount: prev.followersCount - 1 }
+        : prev
+    );
+    setFollowState("FOLLOW");
+    setShowCancelModal(false);
   };
 
   const openPostModal = async (idx: number) => {
     if (!user) return;
+
     setSelectedPostIndex(idx);
     setCarouselIndex(0);
 
     try {
       const postId = user.posts[idx].id;
-      const res = await api.get(
-        `/posts/${postId}/comments`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      const res = await api.get(`/posts/${postId}/comments`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
       const normalized = (res.data.comments || []).map((c: any) => ({
         ...c,
         likesCount: c.likesCount ?? c.likes?.length ?? 0,
         likedByCurrentUser: c.likedByCurrentUser ?? false,
+        user_profile: c.user?.user_profile
+          ? `${BACKEND_URL}/uploads/${c.user.user_profile}`
+          : "/avatar.png",
+        username: c.user?.username ?? "unknown",
         replies: (c.replies || []).map((r: any) => ({
           ...r,
           likesCount: r.likesCount ?? r.likes?.length ?? 0,
           likedByCurrentUser: r.likedByCurrentUser ?? false,
+          user_profile: r.user?.user_profile
+            ? `${BACKEND_URL}/uploads/${r.user.user_profile}`
+            : "/avatar.png",
+          username: r.user?.username ?? "unknown",
         })),
       }));
 
       setPostComments(normalized);
-    } catch (err) {
-      console.error("Failed to fetch comments", err);
+    } catch {
       setPostComments([]);
     }
 
     setModalOpen(true);
   };
 
+  const handlePostDeleted = () => {
+    setUser((prev: any) => ({
+      ...prev,
+      posts: prev.posts.filter(
+        (_: any, i: number) => i !== selectedPostIndex
+      ),
+    }));
+    setModalOpen(false);
+  };
+
   if (loading) return <p className="text-center mt-10">Loading...</p>;
   if (!user) return <p className="text-center mt-10">User not found</p>;
+
+  const isOwnProfile = meId === user.id;
+  const canViewPosts =
+    !user.isPrivate || followState === "FOLLOWING" || isOwnProfile;
 
   return (
     <div className="max-w-4xl mx-auto p-6">
@@ -156,94 +245,79 @@ const Profile = () => {
         <CustomImage
           imgSrc={
             user.user_profile
-              ? `${BACKEND_URL}/uploads/${user.user_profile}?t=${Date.now()}`
+              ? `${BACKEND_URL}/uploads/${user.user_profile}`
               : "/avatar.png"
           }
-          className="rounded-full w-16 h-16 object-cover"
+          className="w-20 h-20 rounded-full object-cover"
         />
 
-        <div className="flex flex-col gap-2">
+        <div>
           <p className="text-xl font-semibold">{user.userName}</p>
-          <p className="text-sm">{user.fullName}</p>
+          <p>{user.fullName}</p>
 
           <div className="flex gap-4 text-sm">
-            <p>{user.posts.length} posts</p>
-
-            <button
-              onClick={() => setShowFollowers(true)}
-              className="hover:underline"
-            >
-              {user.followersCount || 0} followers
+            <span>{canViewPosts ? user.posts.length : 0} posts</span>
+            <button onClick={() => setShowFollowers(true)}>
+              {user.followersCount} followers
             </button>
-
-            <button
-              onClick={() => setShowFollowing(true)}
-              className="hover:underline"
-            >
-              {user.followingCount || 0} following
+            <button onClick={() => setShowFollowing(true)}>
+              {user.followingCount} following
             </button>
           </div>
 
-          <p className="text-sm">{user.bio}</p>
+          <p>{user.bio}</p>
         </div>
 
         {isOwnProfile ? (
-          <button
-            className="border-none px-4 py-1 rounded-md bg-gray-100 text-sm"
-            onClick={() =>
-              navigate("/edit-profile", {
-                state: { fromProfile: true },
-              })
-            }
-          >
-            Edit profile
-          </button>
-        ) : (
           <div className="flex gap-2">
             <button
-              onClick={handleFollowToggle}
-              className={`px-4 py-1 rounded-md ${
-                user.isFollowing
-                  ? "bg-gray-100 text-gray-800 text-sm"
-                  : "bg-blue-600 text-white text-sm"
-              }`}
+              onClick={() => navigate("/edit-profile")}
+              className="px-4 py-1 bg-gray-100 rounded"
             >
-              {user.isFollowing ? "Unfollow" : "Follow"}
+              Edit profile
             </button>
-
-            {user.isFollowing && (
-              <button
-                className="px-4 py-1 rounded-md bg-green-500 text-white text-sm"
-                onClick={() => navigate(`/messages/${user.id}`)}
-              >
-                Message
-              </button>
-            )}
+            <button
+              onClick={() => navigate("/account-settings")}
+              className="p-2 rounded-full hover:bg-gray-200"
+            >
+              <FiSettings />
+            </button>
           </div>
+        ) : (
+          <button
+            onClick={handleFollow}
+            className={`px-4 py-1 rounded font-medium ${followState === "FOLLOW"
+                ? "bg-blue-600 text-white"
+                : "bg-gray-200"
+              }`}
+          >
+            {followState === "FOLLOW"
+              ? "Follow"
+              : followState === "REQUESTED"
+                ? "Requested"
+                : "Following"}
+          </button>
         )}
       </div>
 
-      <div className="flex justify-center gap-10 border-t pt-4 text-sm">
-        <button
-          onClick={() => setActiveTab("posts")}
-          className="flex gap-2 text-sm"
-        >
-          <FiGrid className="text-xl" /> POSTS
-        </button>
-        <button onClick={() => setActiveTab("tagged")} className="flex gap-2">
-          <FiTag className="text-xl" /> TAGGED
-        </button>
-      </div>
-
-      <div className="grid grid-cols-3 gap-1 mt-6">
-        {activeTab === "posts" &&
-          user.posts.map((post, idx) => (
+      {!canViewPosts ? (
+        <div className="flex flex-col items-center mt-20 text-gray-500">
+          <FiLock />
+          <p>This account is private</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-3 gap-1 mt-6">
+          {user.posts.map((post, idx) => (
             <div
               key={post.id}
               className="relative cursor-pointer group"
               onClick={() => openPostModal(idx)}
             >
-              <img src={post.images[0]} className="w-full h-80 object-cover" />
+              <img
+                src={post.images[0]}
+                className="w-full h-80 object-cover"
+              />
+
               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center">
                 <div className="flex gap-6 text-white">
                   <span className="flex items-center gap-1">
@@ -256,20 +330,30 @@ const Profile = () => {
               </div>
             </div>
           ))}
-      </div>
+        </div>
+      )}
 
       {modalOpen && user && (
         <CommentsModal
-          post={user.posts[selectedPostIndex]}
+          post={{
+            ...user.posts[selectedPostIndex],
+            username:
+              user.posts[selectedPostIndex].username ?? user.userName,
+            user_profile:
+              user.posts[selectedPostIndex].user_profile ?? "/avatar.png",
+          }}
           comments={postComments}
           current={carouselIndex}
           setCurrent={setCarouselIndex}
           onClose={() => setModalOpen(false)}
+          onPostDeleted={handlePostDeleted}
+        // currentUserId={meId} 
         />
       )}
 
+
       {showFollowers && (
-        <FollowersModal
+        <FollowModal
           userId={user.id}
           type="followers"
           onClose={() => setShowFollowers(false)}
@@ -277,10 +361,17 @@ const Profile = () => {
       )}
 
       {showFollowing && (
-        <FollowersModal
+        <FollowModal
           userId={user.id}
           type="following"
           onClose={() => setShowFollowing(false)}
+        />
+      )}
+
+      {showCancelModal && (
+        <CancelRequestModal
+          onConfirm={confirmCancelRequest}
+          onClose={() => setShowCancelModal(false)}
         />
       )}
     </div>

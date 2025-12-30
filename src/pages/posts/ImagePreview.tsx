@@ -53,7 +53,7 @@ const ImagePreview: React.FC<CropPreviewProps> = ({
 
         <button
           onClick={() => setShowPicker((prev) => !prev)}
-          className="absolute bottom-4 right-4 bg-black/70 p-3 rounded-full hover:bg-black"
+          className="absolute bottom-4 right-4 bg-white p-3 rounded-full hover:bg-grey"
         >
           <FiCopy className="text-black text-xl" />
         </button>
