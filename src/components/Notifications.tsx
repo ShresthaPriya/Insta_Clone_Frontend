@@ -4,9 +4,9 @@ import { socket } from "../socket/socket";
 import CustomImage from "./CustomImage";
 import CommentsModal from "./CommentsModal";
 import api from "../utils/api";
+import { BASE_URL } from "../utils/api";
 import fallbackImg from "../assets/pi.jpg";
 
-const URL = "http://localhost:4000";
 
 interface Sender {
   id: string;
@@ -17,12 +17,12 @@ interface Sender {
 interface Notification {
   id: string;
   type:
-    | "FOLLOW"
-    | "FOLLOW_REQUEST"
-    | "FOLLOW_ACCEPTED"
-    | "LIKE"
-    | "COMMENT"
-    | "REPLY";
+  | "FOLLOW"
+  | "FOLLOW_REQUEST"
+  | "FOLLOW_ACCEPTED"
+  | "LIKE"
+  | "COMMENT"
+  | "REPLY";
   isRead: boolean;
   userId: string;
   postId?: string;
@@ -35,7 +35,9 @@ interface Notification {
     userName?: string;
     user_profile?: string;
   };
+  followRequestStatus?: "PENDING" | "ACCEPTED" | "REJECTED";
 }
+
 
 export const Notifications = () => {
   const navigate = useNavigate();
@@ -49,7 +51,7 @@ export const Notifications = () => {
   const [comments, setComments] = useState<any[]>([]);
   const [current, setCurrent] = useState(0);
 
- 
+
   const loadNotifications = async () => {
     try {
       const res = await api.get("/notifications");
@@ -74,7 +76,7 @@ export const Notifications = () => {
     return () => socket.off("notification", handleNotification);
   }, [myUserId]);
 
- 
+
   const openPostComments = async (postId: string) => {
     try {
       const postRes = await api.get(`/posts/${postId}`);
@@ -84,7 +86,7 @@ export const Notifications = () => {
         ...post,
         images:
           post.urls?.map((u: string) =>
-            u.startsWith("http") ? u : `${URL}${u}`
+            u.startsWith("http") ? u : `${BASE_URL}${u}`
           ) ?? [],
         likesCount: post.likesCount ?? 0,
         likedByCurrentUser: post.likedByCurrentUser ?? false,
@@ -120,46 +122,46 @@ export const Notifications = () => {
   const openProfile = (userName: string) => navigate(`/profile/${userName}`);
 
 
-const acceptRequest = async (n: Notification) => {
-  try {
-    if (!n.followRequestId) return;
+  const acceptRequest = async (n: Notification) => {
+    try {
+      if (!n.followRequestId) return;
 
-    const res = await api.post(`/follow/follow-request/${n.followRequestId}/accept`);
+      const res = await api.post(`/follow/follow-request/${n.followRequestId}/accept`);
 
-    setNotifications((prev) =>
-      prev.map((notif) =>
-        notif.id === n.id
-          ? { ...notif, type: "FOLLOW_ACCEPTED", isRead: true }
-          : notif
-      )
-    );
+      setNotifications((prev) =>
+        prev.map((notif) =>
+          notif.id === n.id
+            ? { ...notif, type: "FOLLOW_ACCEPTED", isRead: true }
+            : notif
+        )
+      );
 
-    console.log("Follow request accepted:", res.data);
-  } catch (err: any) {
-    console.error("Failed to accept follow request", err.response?.data || err.message);
-    alert(err.response?.data?.message || "Failed to accept follow request");
-  }
-};
+      console.log("Follow request accepted:", res.data);
+    } catch (err: any) {
+      console.error("Failed to accept follow request", err.response?.data || err.message);
+      alert(err.response?.data?.message || "Failed to accept follow request");
+    }
+  };
 
-const rejectRequest = async (n: Notification) => {
-  try {
-    if (!n.followRequestId) return;
+  const rejectRequest = async (n: Notification) => {
+    try {
+      if (!n.followRequestId) return;
 
-    await api.delete(`/follow/follow-request/${n.followRequestId}/reject`);
+      await api.delete(`/follow/follow-request/${n.followRequestId}/reject`);
 
-    setNotifications((prev) => prev.filter((notif) => notif.id !== n.id));
+      setNotifications((prev) => prev.filter((notif) => notif.id !== n.id));
 
-    console.log("Follow request rejected");
-  } catch (err: any) {
-    console.error("Failed to reject follow request", err.response?.data || err.message);
-    alert(err.response?.data?.message || "Failed to reject follow request");
-  }
-};
-
-
+      console.log("Follow request rejected");
+    } catch (err: any) {
+      console.error("Failed to reject follow request", err.response?.data || err.message);
+      alert(err.response?.data?.message || "Failed to reject follow request");
+    }
+  };
 
 
- 
+
+
+
   return (
     <>
       <div className="max-w-xl mx-auto p-4 space-y-3">
@@ -204,7 +206,7 @@ const rejectRequest = async (n: Notification) => {
                       sender.user_profile
                         ? sender.user_profile.startsWith("http")
                           ? sender.user_profile
-                          : `${URL}/uploads/${sender.user_profile}`
+                          : `${BASE_URL}/uploads/${sender.user_profile}`
                         : fallbackImg
                     }
                     fallBack={fallbackImg}
@@ -224,13 +226,12 @@ const rejectRequest = async (n: Notification) => {
                   </p>
                 </div>
 
-                {/* Post thumbnail */}
                 {n.post && n.post.urls?.[0] && (
                   <img
                     src={
                       n.post.urls[0].startsWith("http")
                         ? n.post.urls[0]
-                        : `${URL}${n.post.urls[0]}`
+                        : `${BASE_URL}${n.post.urls[0]}`
                     }
                     className="w-10 h-10 object-cover rounded-md"
                     alt="post"
@@ -238,31 +239,29 @@ const rejectRequest = async (n: Notification) => {
                 )}
 
                 {n.type === "FOLLOW_REQUEST" && n.sender && (
-  <div className="flex gap-2">
-    <button
-      onClick={() => acceptRequest(n)}
-      className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md"
-    >
-      Accept
-    </button>
+                  <div className="flex gap-2">
+                    {n.followRequestId && n.followRequestStatus === "PENDING" && (
+                      <>
+                        <button onClick={() => acceptRequest(n)} className="px-3 py-1 text-sm bg-blue-600 text-white rounded-md">Accept</button>
+                        <button onClick={() => rejectRequest(n)} className="px-3 py-1 text-sm bg-gray-300 rounded-md">Decline</button>
+                      </>
+                    )}
+                    {n.followRequestStatus === "ACCEPTED" && (
+                      <button disabled className="px-3 py-1 text-sm bg-green-600 text-white rounded-md cursor-default">Accepted</button>
+                    )}
+                    {n.followRequestStatus === "REJECTED" && (
+                      <button disabled className="px-3 py-1 text-sm bg-red-600 text-white rounded-md cursor-default">Rejected</button>
+                    )}
+                  </div>
+                )}
 
-    <button
-      onClick={() => rejectRequest(n)}
-      className="px-3 py-1 text-sm bg-gray-300 rounded-md"
-    >
-      Decline
-    </button>
-  </div>
-)}
 
-{n.type === "FOLLOW_ACCEPTED" && (
-  <button
-    disabled
-    className="px-3 py-1 text-sm bg-green-600 text-white rounded-md cursor-default"
-  >
-    Accepted
-  </button>
-)}
+                {n.type === "FOLLOW_ACCEPTED" && (
+                  <p className="text-sm">
+                    {/* <b>{sender.userName}</b>  */}
+                  </p>
+                )}
+
 
               </div>
             );

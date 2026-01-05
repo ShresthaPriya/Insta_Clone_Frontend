@@ -23,6 +23,7 @@ import insta_logo from "../assets/Vector.png";
 import SidebarItem from "./SidebarItems";
 import CustomImage from "../components/CustomImage";
 import api from "../utils/api";
+import { BASE_URL } from "../utils/api";
 import fallbackImg from "../assets/pi.jpg";
 
 interface SidebarProps {
@@ -30,7 +31,6 @@ interface SidebarProps {
   onLogout: () => void;
 }
 
-const BACKEND_URL = "http://localhost:4000";
 
 const Sidebar: React.FC<SidebarProps> = ({ onClick, onLogout }) => {
   const [activeItem, setActiveItem] = useState("home");
@@ -48,7 +48,7 @@ const fetchUserProfile = async () => {
     });
     setUserProfile(
       res.data?.user_profile
-        ? `${BACKEND_URL}/uploads/${res.data.user_profile}?t=${Date.now()}`
+        ? `${BASE_URL}/uploads/${res.data.user_profile}?t=${Date.now()}`
         : null
     );
   } catch (err) {

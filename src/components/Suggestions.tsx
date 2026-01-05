@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../utils/api";
+import { BASE_URL } from "../utils/api";
 import CustomImage from "../components/CustomImage";
 import fallbackImg from "../assets/pi.jpg";
 
@@ -13,7 +14,6 @@ interface SuggestionUser {
   isRequested: boolean;
 }
 
-const BACKEND_URL = "http://localhost:4000";
 
 const Suggestions = () => {
   const [suggestions, setSuggestions] = useState<SuggestionUser[]>([]);
@@ -79,7 +79,7 @@ const Suggestions = () => {
               <CustomImage
                 imgSrc={
                   user.user_profile
-                    ? `${BACKEND_URL}/uploads/${user.user_profile}`
+                    ? `${BASE_URL}/uploads/${user.user_profile}`
                     : fallbackImg
                 }
                 fallBack={fallbackImg}

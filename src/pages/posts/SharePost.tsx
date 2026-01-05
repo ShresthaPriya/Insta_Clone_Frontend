@@ -8,6 +8,7 @@ import {
   FiX,
 } from "react-icons/fi";
 import api from "../../utils/api";
+import { BASE_URL } from "../../utils/api";
 import CustomImage from "../../components/CustomImage";
 import type { Post } from "../../components/FeedPosts";
 import { toast } from "react-toastify";
@@ -26,7 +27,6 @@ interface SharePostProps {
   postId?: string;
 }
 
-const BACKEND_URL = "http://localhost:4000";
 
 const SharePost: React.FC<SharePostProps> = ({
   images,
@@ -134,7 +134,7 @@ const SharePost: React.FC<SharePostProps> = ({
         username: createdPost.user?.userName || username,
         images:
           createdPost.urls?.length > 0
-            ? createdPost.urls.map((u: string) => `${BACKEND_URL}${u}`)
+            ? createdPost.urls.map((u: string) => `${BASE_URL}${u}`)
             : imageUrls,
         user_id: createdPost.userId,
         user_profile: createdPost.user?.user_profile || user_profile,
@@ -237,7 +237,7 @@ const SharePost: React.FC<SharePostProps> = ({
                   user_profile
                     ? user_profile.startsWith("http")
                       ? user_profile
-                      : `${BACKEND_URL}/uploads/${user_profile}`
+                      : `${BASE_URL}/uploads/${user_profile}`
                     : undefined
                 }
                 className="w-8 h-8 rounded-full object-cover"
