@@ -59,6 +59,7 @@ const OtpModal = ({ otp, waitSeconds, onClose, onResendOtp, onVerify }: OtpModal
   const handleResendClick = async () => {
     try {
       const newOtp = await onResendOtp();
+       if (!newOtp) return;
       toast.success("OTP resent successfully!");
       setInputs(["", "", "", "", "", ""]);
       setTimeLeft(waitSeconds);
@@ -80,7 +81,7 @@ const OtpModal = ({ otp, waitSeconds, onClose, onResendOtp, onVerify }: OtpModal
     <>
       {otp && closeOtpTimer && (
 
-        <div className="flex justify-end fixed top-4 right-4 z-50">
+        <div className="flex justify-center fixed top-4 left-4 z-50">
           <div className="w-60 p-4 bg-white rounded-md shadow-xl">
             <p className="text-blue-700 text-center">
               Your OTP code is
@@ -91,7 +92,8 @@ const OtpModal = ({ otp, waitSeconds, onClose, onResendOtp, onVerify }: OtpModal
         </div>
       )}
 
-      <div className="flex justify-center items-center inset-0 fixed bg-black bg-opacity-30 z-40">
+      <div className="flex justify-center items-center inset-0 fixed z-40 backdrop-blur-sm bg-black/20">
+
         <div className="flex flex-col gap-4 bg-white rounded-md shadow-2xl p-8 w-96">
           <div className="flex justify-between items-center">
             <FaTimes className="text-xl font-bold cursor-pointer" onClick={onClose} />
